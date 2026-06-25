@@ -8,6 +8,11 @@ Build with the [Meltano Target SDK](https://sdk.meltano.com).
 
 By default we add a new _sdc_ metadata called _sdc_started_at and defined this attribute as a partition to make easier to detect the latest extraction.
 
+### Configuration
+
+- `s3_path`: Base S3 path where parquet datasets are written.
+- `athena_database`: Athena/Glue database used for catalog metadata and as the folder under `s3_path`.
+
 ### Initialize your Development Environment
 
 ```bash

@@ -17,3 +17,4 @@ plugins:
     - name: s3_path
     - name: aws_access_key_id
     - name: aws_secret_access_key
+    - name: athena_database
