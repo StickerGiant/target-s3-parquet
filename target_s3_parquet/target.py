@@ -24,6 +24,8 @@ class TargetS3Parquet(Target):
             required=False,
         ),
         th.Property("athena_database", th.StringType, required=True),
+        th.Property("schema_prefix", th.StringType, required=False),
+        th.Property("schema_description", th.StringType, required=False),
         th.Property("add_record_metadata", th.BooleanType, default=None),
         th.Property("stringify_schema", th.BooleanType, default=None),
     ).to_dict()

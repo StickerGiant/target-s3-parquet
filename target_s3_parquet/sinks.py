@@ -21,6 +21,9 @@ from target_s3_parquet.sanitizer import (
 from datetime import datetime
 
 STARTED_AT = datetime.now()
+DEFAULT_SCHEMA_DESCRIPTION = (
+    'Automatically created by Singer target "target-s3-parquet".'
+)
 
 
 class S3ParquetSink(BatchSink):
@@ -38,16 +41,27 @@ class S3ParquetSink(BatchSink):
         self._ensure_athena_database()
         self._glue_schema = self._get_glue_schema()
 
+    def _athena_database_name(self):
+        schema_prefix = self.config.get("schema_prefix") or ""
+        if schema_prefix and not schema_prefix.endswith("_"):
+            schema_prefix = f"{schema_prefix}_"
+
+        return f"{schema_prefix}{self.config.get('athena_database')}"
+
+    def _athena_database_description(self):
+        return self.config.get("schema_description") or DEFAULT_SCHEMA_DESCRIPTION
+
     def _ensure_athena_database(self):
         wr.catalog.create_database(
-            name=self.config.get("athena_database"),
+            name=self._athena_database_name(),
+            description=self._athena_database_description(),
             exist_ok=True,
         )
 
     def _get_glue_schema(self):
 
         catalog_params = {
-            "database": self.config.get("athena_database"),
+            "database": self._athena_database_name(),
             "table": self.stream_name,
         }
 
@@ -93,7 +107,7 @@ class S3ParquetSink(BatchSink):
             compression="gzip",
             dataset=True,
             path=full_path,
-            database=self.config.get("athena_database"),
+            database=self._athena_database_name(),
             table=self.stream_name,
             mode="append",
             partition_cols=["_sdc_started_at"],

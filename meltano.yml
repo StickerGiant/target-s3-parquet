@@ -18,3 +18,5 @@ plugins:
     - name: aws_access_key_id
     - name: aws_secret_access_key
     - name: athena_database
+    - name: schema_prefix
+    - name: schema_description

@@ -12,6 +12,8 @@ By default we add a new _sdc_ metadata called _sdc_started_at and defined this a
 
 - `s3_path`: Base S3 path where parquet datasets are written.
 - `athena_database`: Athena/Glue database used for catalog metadata and as the folder under `s3_path`.
+- `schema_prefix`: Optional prefix for the Athena/Glue database name. An underscore is added between the prefix and database name.
+- `schema_description`: Optional Athena/Glue database description.
 
 ### Initialize your Development Environment
 
