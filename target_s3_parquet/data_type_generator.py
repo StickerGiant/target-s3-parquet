@@ -1,4 +1,4 @@
-from target_s3_parquet.sanitizer import get_valid_types, type_from_anyof
+from target_s3_parquet.sanitizer import get_valid_types, resolve_anyof, type_from_anyof
 
 
 def build_struct_type(attributes, level):
@@ -56,16 +56,21 @@ def generate_tap_schema(schema, level=0, only_string=False):
             field_definitions[name] = "string"
             continue
 
+        # An anyOf wrapper carries neither "properties" nor "items" — those live
+        # on the branch, so resolve before reaching for them.
+        nested = resolve_anyof(attributes)
+
         if cleaned_type == "object":
             field_definitions[name] = build_struct_type(
-                attributes.get("properties", {}), new_level
+                nested.get("properties", {}), new_level
             )
         elif cleaned_type == "array":
-            array_type = get_valid_types(attributes["items"]["type"])
+            items = resolve_anyof(nested["items"])
+            array_type = get_valid_types(items["type"])
 
             if array_type == "object":
                 array_type = build_struct_type(
-                    attributes["items"].get("properties", {}), new_level + 1
+                    items.get("properties", {}), new_level + 1
                 )
 
             array_type = coerce_types(name, array_type)

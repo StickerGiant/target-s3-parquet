@@ -15,6 +15,29 @@ def _convert_decimal(value):
     return value
 
 
+def _deep_convert_decimal(value):
+    if isinstance(value, Decimal):
+        return float(value)
+    if isinstance(value, list):
+        return [_deep_convert_decimal(v) for v in value]
+    if isinstance(value, dict):
+        return {k: _deep_convert_decimal(v) for k, v in value.items()}
+    return value
+
+
+def convert_nested_decimals(value):
+    """Convert Decimals nested inside lists/dicts to float.
+
+    pyarrow coerces a top-level Decimal column via its dtype hint, but builds
+    nested struct/array columns straight from Python objects and rejects the
+    Decimals a singer.decimal field yields. Scalars are returned untouched so
+    the working top-level path keeps its existing dtype handling.
+    """
+    if isinstance(value, (list, dict)):
+        return _deep_convert_decimal(value)
+    return value
+
+
 def get_valid_types(types):
     if isinstance(types, list):
         return _remove_nulls(types)[0]
@@ -22,8 +45,31 @@ def get_valid_types(types):
         return types
 
 
+def resolve_anyof(attributes):
+    """Return the branch of an anyOf that carries the real type.
+
+    Taps express a nullable field either as {"type": ["null", "array"], ...} or
+    as {"anyOf": [{"type": "array", ...}, {"type": "null"}]}. In the latter,
+    "items"/"properties" live on the branch, not the wrapper, so callers must
+    read them from the value returned here. Returns attributes unchanged when
+    there is no anyOf to resolve.
+    """
+    if "type" in attributes or not attributes.get("anyOf"):
+        return attributes
+
+    return next(
+        (
+            branch
+            for branch in attributes["anyOf"]
+            if branch.get("type") not in (None, "null")
+        ),
+        attributes,
+    )
+
+
 def type_from_anyof(attributes):
-    return attributes.get("anyOf") and attributes.get("anyOf")[0].get("type")
+    resolved = resolve_anyof(attributes)
+    return None if resolved is attributes else resolved.get("type")
 
 
 def get_specific_type_attributes(schema: dict, attr_type: str) -> list:

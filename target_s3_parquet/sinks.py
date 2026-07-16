@@ -15,6 +15,7 @@ from target_s3_parquet.sanitizer import (
     get_specific_type_attributes,
     apply_json_dump_to_df,
     stringify_df,
+    convert_nested_decimals,
 )
 
 
@@ -80,6 +81,10 @@ class S3ParquetSink(BatchSink):
         # Path(context["file_path"]).unlink()  # Delete local copy
 
         df = DataFrame(context["records"])
+
+        for column in df.columns:
+            if df[column].dtype == "object":
+                df[column] = df[column].map(convert_nested_decimals)
 
         df["_sdc_started_at"] = STARTED_AT.timestamp()
 
