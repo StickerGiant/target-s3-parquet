@@ -23,7 +23,10 @@ def coerce_types(name, type, format=None, description=None):
         return "double"
 
     if type == "integer":
-        return "int"
+        # bigint, not int: JSON-schema "integer" is unbounded, but Athena "int"
+        # is 32-bit. Values like Google Ads cost_micros or ad-account IDs exceed
+        # int32, and awswrangler raises on the unsafe int64->int32 cast.
+        return "bigint"
 
     if format == "date-time":
         return "timestamp"

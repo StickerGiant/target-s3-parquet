@@ -41,7 +41,7 @@ def test_generate_tap_schema():
 
     expected_result = {
         "vid": "string",
-        "merged_vids": "array<int>",
+        "merged_vids": "array<bigint>",
         "double_values": "array<double>",
     }
 
@@ -85,7 +85,7 @@ def test_complex_schema():
 
     expected_result = {
         "identity_profiles": "array<struct<deleted_changed_timestamp:timestamp, "
-        + "saved_at_timestamp:timestamp, vid:int, "
+        + "saved_at_timestamp:timestamp, vid:bigint, "
         + "identities:array<struct<timestamp:timestamp, type:string, "
         + "value:string>>>>"
     }
@@ -130,8 +130,8 @@ def test_integer_type():
     }
 
     assert generate_tap_schema(schema) == {
-        "property_count_events": "struct<value:int>",
-        "identities": "array<struct<some_value:int>>",
+        "property_count_events": "struct<value:bigint>",
+        "identities": "array<struct<some_value:bigint>>",
     }
 
 
