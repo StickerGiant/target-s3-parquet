@@ -51,7 +51,12 @@ def generate_tap_schema(schema, level=0, only_string=False):
         attribute_type = attributes.get("type") or type_from_anyof(attributes)
 
         if attribute_type is None:
-            raise Exception(f"Invalid schema format: {schema}")
+            # Untyped/empty schema (e.g. {} meaning "any type", as Zendesk emits
+            # for custom/metadata fields). Fall back to string rather than crash
+            # the whole load, matching the "when in doubt, string" behaviour used
+            # for only_string mode and empty structs.
+            field_definitions[name] = "string"
+            continue
 
         cleaned_type = get_valid_types(attribute_type)
 

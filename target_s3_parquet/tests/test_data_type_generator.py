@@ -2,15 +2,16 @@ from target_s3_parquet.data_type_generator import (
     generate_tap_schema,
     generate_current_target_schema,
 )
-import pytest
 from pandas import DataFrame
 
 
-def test_invalid_schema():
-    schema = {"someAttribute": {"invalidKey": []}}
-
-    with pytest.raises(Exception, match="Invalid schema format:"):
-        generate_tap_schema(schema)
+def test_untyped_schema_degrades_to_string():
+    # A schema with no resolvable type (empty {} or an unrecognized shape) must
+    # degrade to string rather than crash the load.
+    assert generate_tap_schema({"someAttribute": {"invalidKey": []}}) == {
+        "someAttribute": "string"
+    }
+    assert generate_tap_schema({"someAttribute": {}}) == {"someAttribute": "string"}
 
 
 def test_schema_with_all_of():
@@ -173,6 +174,38 @@ def test_only_string_definition():
     assert generate_tap_schema(schema, only_string=True) == {
         "property_count_events": "string",
         "identities": "string",
+    }
+
+
+def test_untyped_field_defaults_to_string():
+    # Zendesk emits {} (any-type) for custom/metadata value fields; must not crash.
+    schema = {
+        "id": {"type": ["null", "integer"]},
+        "value": {},
+    }
+
+    assert generate_tap_schema(schema) == {
+        "id": "bigint",
+        "value": "string",
+    }
+
+
+def test_untyped_field_nested_in_struct():
+    schema = {
+        "custom_fields": {
+            "type": ["null", "array"],
+            "items": {
+                "type": ["null", "object"],
+                "properties": {
+                    "id": {"type": ["null", "integer"]},
+                    "value": {},
+                },
+            },
+        }
+    }
+
+    assert generate_tap_schema(schema) == {
+        "custom_fields": "array<struct<id:bigint, value:string>>",
     }
 
 
