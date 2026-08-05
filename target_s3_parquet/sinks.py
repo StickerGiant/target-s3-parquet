@@ -106,10 +106,15 @@ class S3ParquetSink(BatchSink):
 
         full_path = f"{self.config.get('s3_path')}/{self.config.get('athena_database')}/{self.stream_name}"
 
+        # "none" is spelled as a null codec by awswrangler/pyarrow.
+        compression = self.config.get("compression", "snappy")
+        if compression in ("none", "uncompressed", ""):
+            compression = None
+
         wr.s3.to_parquet(
             df=df,
             index=False,
-            compression="gzip",
+            compression=compression,
             dataset=True,
             path=full_path,
             database=self._athena_database_name(),

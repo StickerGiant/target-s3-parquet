@@ -28,5 +28,17 @@ class TargetS3Parquet(Target):
         th.Property("schema_description", th.StringType, required=False),
         th.Property("add_record_metadata", th.BooleanType, default=None),
         th.Property("stringify_schema", th.BooleanType, default=None),
+        th.Property(
+            "compression",
+            th.StringType,
+            default="snappy",
+            description=(
+                "Parquet compression codec: snappy (default), gzip, zstd or none. "
+                "Snappy compresses and decompresses substantially faster than gzip "
+                "at the cost of ~20-30% larger files, and matches the codec used by "
+                "the dbt silver/gold layers. Compression is recorded per column "
+                "chunk, so a table may mix codecs across files without issue."
+            ),
+        ),
     ).to_dict()
     default_sink_class = S3ParquetSink
