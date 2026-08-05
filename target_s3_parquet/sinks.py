@@ -16,6 +16,7 @@ from target_s3_parquet.sanitizer import (
     apply_json_dump_to_df,
     stringify_df,
     convert_nested_decimals,
+    coerce_untyped_values,
 )
 
 
@@ -82,9 +83,15 @@ class S3ParquetSink(BatchSink):
 
         df = DataFrame(context["records"])
 
+        properties = self.schema.get("properties", {})
         for column in df.columns:
-            if df[column].dtype == "object":
-                df[column] = df[column].map(convert_nested_decimals)
+            if df[column].dtype != "object":
+                continue
+            df[column] = df[column].map(convert_nested_decimals)
+            if column in properties:
+                df[column] = df[column].map(
+                    lambda v, s=properties[column]: coerce_untyped_values(v, s)
+                )
 
         df["_sdc_started_at"] = STARTED_AT.timestamp()
 

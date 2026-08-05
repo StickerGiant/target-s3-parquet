@@ -190,6 +190,49 @@ def test_untyped_field_defaults_to_string():
     }
 
 
+def test_coerce_untyped_values_matches_declared_string():
+    # Zendesk tickets.custom_fields[].value is declared `{}` (any type) and so
+    # becomes a string column; the data holds bool/int/str per field config.
+    from target_s3_parquet.sanitizer import coerce_untyped_values
+
+    schema = {
+        "type": ["null", "array"],
+        "items": {
+            "type": ["null", "object"],
+            "properties": {"id": {"type": ["null", "integer"]}, "value": {}},
+        },
+    }
+    value = [
+        {"id": 1, "value": True},
+        {"id": 2, "value": "escalated"},
+        {"id": 3, "value": 42},
+        {"id": 4, "value": None},
+        {"id": 5, "value": {"nested": 1}},
+    ]
+
+    assert coerce_untyped_values(value, schema) == [
+        {"id": 1, "value": "True"},
+        {"id": 2, "value": "escalated"},
+        {"id": 3, "value": "42"},
+        {"id": 4, "value": None},
+        {"id": 5, "value": '{"nested": 1}'},
+    ]
+
+
+def test_coerce_untyped_values_leaves_typed_data_alone():
+    from target_s3_parquet.sanitizer import coerce_untyped_values
+
+    schema = {
+        "type": ["null", "array"],
+        "items": {
+            "type": ["null", "object"],
+            "properties": {"n": {"type": ["null", "integer"]}},
+        },
+    }
+    value = [{"n": 7}]
+    assert coerce_untyped_values(value, schema) == [{"n": 7}]
+
+
 def test_untyped_field_nested_in_struct():
     schema = {
         "custom_fields": {

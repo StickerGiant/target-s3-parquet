@@ -38,6 +38,49 @@ def convert_nested_decimals(value):
     return value
 
 
+def coerce_untyped_values(value, schema):
+    """Stringify values sitting at schema positions that carry no type.
+
+    generate_tap_schema maps an untyped schema (e.g. Zendesk's polymorphic
+    tickets.custom_fields[].value, declared as `{}`) to a string column. The
+    data at those positions is whatever the source put there -- bool for a
+    checkbox field, int for a numeric one -- and pyarrow refuses to write a
+    bool into a string column, so the values have to be coerced to match the
+    type we declared. Containers are JSON-encoded rather than repr'd so the
+    result stays parseable downstream.
+
+    Typed positions are walked but left untouched.
+    """
+    if value is None:
+        return None
+
+    resolved = resolve_anyof(schema) if isinstance(schema, dict) else {}
+    declared = resolved.get("type") if isinstance(resolved, dict) else None
+
+    if declared is None:
+        # No resolvable type -- generate_tap_schema declared this string.
+        if isinstance(value, str):
+            return value
+        if isinstance(value, (dict, list)):
+            return json.dumps(value, default=_convert_decimal)
+        return str(value)
+
+    cleaned = get_valid_types(declared)
+
+    if cleaned == "array" and isinstance(value, list):
+        items = resolved.get("items", {})
+        return [coerce_untyped_values(v, items) for v in value]
+
+    if cleaned == "object" and isinstance(value, dict):
+        props = resolved.get("properties", {})
+        return {
+            k: coerce_untyped_values(v, props[k]) if k in props else v
+            for k, v in value.items()
+        }
+
+    return value
+
+
 def get_valid_types(types):
     if isinstance(types, list):
         return _remove_nulls(types)[0]
